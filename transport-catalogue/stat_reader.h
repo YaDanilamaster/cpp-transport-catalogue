@@ -11,7 +11,7 @@ namespace stat_reader {
 
 	std::ostream& operator<<(std::ostream& os, const transport_catalogue::detail::BusInfo& info);
 
-	void Processing(const transport_catalogue::TransportCatalogue& database);
-	void PrintBusInfo(const transport_catalogue::TransportCatalogue& database);
-	void PrintStopInfo(const transport_catalogue::TransportCatalogue& database);
+	void HandleRequests(const transport_catalogue::TransportCatalogue& database, std::istream& is, std::ostream& os);
+	void PrintBusInfo(const transport_catalogue::TransportCatalogue& database, std::ostream& os);
+	void PrintStopInfo(const transport_catalogue::TransportCatalogue& database, std::ostream& os);
 }

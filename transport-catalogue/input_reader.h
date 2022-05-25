@@ -5,6 +5,8 @@
 #include <string_view>
 #include <vector>
 
+#include "transport_catalogue.h"
+
 namespace input_reader {
 
 	struct DistanceToStop {
@@ -27,12 +29,12 @@ namespace input_reader {
 		const bool is_ring;
 	};
 
-	struct Output {
+	struct StopBusBuffer {
 		std::vector<Stop> stops;
 		std::vector<Bus> buses;
 	};
 
-	Output Load(const size_t count);
+	transport_catalogue::TransportCatalogue Load(std::istream& is);
 
 	namespace detail {
 		Stop ParseStop(std::string& line, const size_t start);

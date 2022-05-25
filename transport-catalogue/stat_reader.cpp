@@ -13,28 +13,28 @@ ostream& stat_reader::operator<<(ostream& os, const detail::BusInfo& info)
 	return os;
 }
 
-void stat_reader::Processing(const TransportCatalogue& database)
+void stat_reader::HandleRequests(const TransportCatalogue& database, istream& is, ostream& os)
 {
 	int n;
-	cin >> n;
+	is >> n;
 	string str_cmd;
-	getline(cin, str_cmd);
+	getline(is, str_cmd);
 
 	for (size_t i = 0; i < n; i++) {
 		cin >> str_cmd;
 
 		if (str_cmd == "Bus") {
-			PrintBusInfo(database);
+			PrintBusInfo(database, os);
 		}
 		else if (str_cmd == "Stop") {
-			PrintStopInfo(database);
+			PrintStopInfo(database, os);
 		}
 
 	}
 
 }
 
-void stat_reader::PrintBusInfo(const TransportCatalogue& database)
+void stat_reader::PrintBusInfo(const TransportCatalogue& database, ostream& os)
 {
 	string str_line;
 	getline(cin, str_line);
@@ -50,7 +50,7 @@ void stat_reader::PrintBusInfo(const TransportCatalogue& database)
 	}
 }
 
-void stat_reader::PrintStopInfo(const TransportCatalogue& database)
+void stat_reader::PrintStopInfo(const TransportCatalogue& database, ostream& os)
 {
 	string str_line;
 	getline(cin, str_line);

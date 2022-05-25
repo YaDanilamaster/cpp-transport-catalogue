@@ -1,22 +1,25 @@
 #include "input_reader.h"
 
 using namespace std;
+using namespace input_reader;
 
-input_reader::Stop::Stop(std::string& stop_name, const double stop_latitude, const double stop_longitude) :
+Stop::Stop(std::string& stop_name, const double stop_latitude, const double stop_longitude) :
 	name(stop_name), latitude(stop_latitude), longitude(stop_longitude)
 {
 }
 
-input_reader::Bus::Bus(string& bus_name, const bool isring) :
+Bus::Bus(string& bus_name, const bool isring) :
 	name(bus_name), is_ring(isring)
 {
 }
 
-input_reader::Output input_reader::Load(const size_t count)
+transport_catalogue::TransportCatalogue input_reader::Load(istream& is)
 {
-	Output result;
+	size_t count;
+	StopBusBuffer stop_bus_buffer;
 	string str_line;
-	getline(cin, str_line);
+	cin >> count;
+	getline(is, str_line);
 
 	for (size_t i = 0; i < count; i++) {
 		getline(cin, str_line);
@@ -26,14 +29,27 @@ input_reader::Output input_reader::Load(const size_t count)
 		string cmd = str_line.substr(0, pos_cmd);
 
 		if (cmd == "Stop") {
-			result.stops.push_back(detail::ParseStop(str_line, pos_cmd + 1));
+			stop_bus_buffer.stops.push_back(detail::ParseStop(str_line, pos_cmd + 1));
 		}
 		else if (cmd == "Bus") {
-			result.buses.push_back(detail::ParseBus(str_line, pos_cmd + 1));
+			stop_bus_buffer.buses.push_back(detail::ParseBus(str_line, pos_cmd + 1));
 		}
 	}
 
-	return result;
+	transport_catalogue::TransportCatalogue database;
+	for (Stop& stop : stop_bus_buffer.stops) {
+		transport_catalogue::detail::StopToAdd new_stop{ stop.name, stop.latitude, stop.longitude, {} };
+		for (auto distance_to_stop : stop.distance_to_stop) {
+			new_stop.distance_to_stop.push_back({ move(distance_to_stop.stop_name), distance_to_stop.distance });
+		}
+		database.AddStop(new_stop);
+	}
+
+	for (Bus& bus : stop_bus_buffer.buses) {
+		database.AddBus(bus.name, bus.stop_for_bus, bus.is_ring);
+	}
+
+	return database;
 }
 
 input_reader::Stop input_reader::detail::ParseStop(std::string& line, const size_t start)
