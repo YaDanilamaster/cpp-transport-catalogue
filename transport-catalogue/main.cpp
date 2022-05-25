@@ -25,7 +25,7 @@ int main() {
 	for (input_reader::Bus& bus : result.buses) {
 		database.AddBus(bus.name, bus.stop_for_bus, bus.is_ring);
 	}
-
+	//
 	stat_reader::Processing(database);
 
 }
