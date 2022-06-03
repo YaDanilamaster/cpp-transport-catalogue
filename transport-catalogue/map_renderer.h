@@ -87,7 +87,7 @@ namespace renderer {
             if (width_zoom && height_zoom) {
                 // Коэффициенты масштабирования по ширине и высоте ненулевые,
                 // берём минимальный из них
-                zoom_coeff_ = std::abs(std::min(*width_zoom, *height_zoom));
+                zoom_coeff_ = std::min(*width_zoom, *height_zoom);
             }
             else if (width_zoom) {
                 // Коэффициент масштабирования по ширине ненулевой, используем его

@@ -14,7 +14,6 @@ namespace json {
 			string key;
 
 			while (it != end) {
-
 				if (*it == '\"') {
 					Node tmp_key = LoadNode(it, ParentPype::Map);
 					if (tmp_key.IsString()) {
@@ -416,7 +415,7 @@ namespace json {
 		return get<bool>(*this);
 	}
 
-	double Node::AsDouble() 
+	double Node::AsDouble()
 	{
 		if (!IsDouble()) {
 			throw logic_error("Ahtung!");
@@ -427,7 +426,7 @@ namespace json {
 		return get<int>(*this);
 	}
 
-	std::string& Node::AsString() 
+	std::string& Node::AsString()
 	{
 		if (!IsString()) {
 			throw logic_error("Ahtung!");
@@ -443,7 +442,7 @@ namespace json {
 		return get<string_view>(*this);
 	}
 
-	Array& Node::AsArray() 
+	Array& Node::AsArray()
 	{
 		if (!IsArray()) {
 			throw logic_error("Ahtung!");
@@ -451,7 +450,7 @@ namespace json {
 		return get<Array>(*this);
 	}
 
-	Dict& Node::AsMap() 
+	Dict& Node::AsMap()
 	{
 		if (!IsDict()) {
 			throw logic_error("Ahtung!");

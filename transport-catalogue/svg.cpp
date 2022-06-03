@@ -66,7 +66,7 @@ namespace svg {
         }
         out << "\"";
         RenderAttrs(context);
-        out << "/> "sv;
+        out << "/>"sv;
     }
 
     // ---------- Text ------------------
@@ -116,11 +116,11 @@ namespace svg {
         out << " x=\""sv << pos_.x << "\" "sv << "y=\""sv << pos_.y << "\""sv;
         out << " dx=\""sv << offset_.x << "\" "sv << "dy=\""sv << offset_.y << "\""sv;
         out << " font-size=\""sv << fontsize_ << "\""sv;
-        if (!font_weight_.empty()) {
-            out << " font-weight=\""sv << font_weight_ << "\""sv;
-        }
         if (!font_family_.empty()) {
             out << " font-family=\""sv << font_family_ << "\""sv;
+        }
+        if (!font_weight_.empty()) {
+            out << " font-weight=\""sv << font_weight_ << "\""sv;
         }
         out << ">"sv << GetSafeData() << "<"sv;
         out << "/text>"sv;

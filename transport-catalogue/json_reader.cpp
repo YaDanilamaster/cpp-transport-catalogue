@@ -1,4 +1,5 @@
 #include "json_reader.h"
+#include "json_builder.h"
 
 namespace jsonReader {
 	using namespace std;
@@ -16,7 +17,7 @@ namespace jsonReader {
 	// Обрабатывает base_requests. Запросы на добавление данных в справочник.
 	void JsonReader::ProcessBaseRequests()
 	{
-		if (jDoc_.GetRoot().IsMap()) {
+		if (jDoc_.GetRoot().IsDict() && jDoc_.GetRoot().AsMap().size() != 0) {
 			// Загрузка данных
 			const json::Node& base_requests_node = jDoc_.GetRoot().AsMap().find("base_requests")->second;
 			BaseRequests(base_requests_node);
@@ -31,7 +32,7 @@ namespace jsonReader {
 	{
 		auto it = jDoc_.GetRoot().AsMap().find("stat_requests");
 		if (it != jDoc_.GetRoot().AsMap().end()) {
-			json::Node& stat_requests_node = it->second;
+			const json::Node& stat_requests_node = it->second;
 			json::Document jDocStatResult = StatRequests(stat_requests_node);
 
 			json::Print(jDocStatResult, os);
@@ -76,28 +77,30 @@ namespace jsonReader {
 			}
 		}
 	}
-
+	// формирует json массив с результатами по запросам
 	json::Document JsonReader::StatRequests(const json::Node& requests)
 	{
-		vector<json::Node> jarray;
+		json::Builder jbuild = json::Builder{};
+		auto jarray = jbuild.StartArray();
+
 		for (const json::Node& request : requests.AsArray()) {
 			const map<string, json::Node>& item = request.AsMap();
 			auto it = item.find("type");
 			if (it != item.end()) {
 				string request_type = it->second.AsString();
 				if (request_type == "Stop") {
-					jarray.push_back(StopInfo(item));
+					jarray.Value(StopInfo(item));
 				}
 				else if (request_type == "Bus") {
-					jarray.push_back(BusInfo(item));
+					jarray.Value(BusInfo(item));
 				}
 				else if (request_type == "Map") {
-					jarray.push_back(SvgMap(item));
+					jarray.Value(SvgMap(item));
 				}
 				// ... новые типы запросов
 			}
 		}
-		return json::Document(json::Node(jarray));
+		return json::Document(jarray.EndArray().Build());
 	}
 
 	const renderer::SVG_Settings JsonReader::RenderSettings(const map<string, json::Node>& jsetings) const
@@ -166,8 +169,8 @@ namespace jsonReader {
 	// Загружает в базу информацию об остановке
 	void JsonReader::LoadStopInfo(const map<string, json::Node>& stop)
 	{
-		Stop newStop(stop.at("name").AsString(), stop.at("latitude").AsDouble(), stop.at("longitude").AsDouble());
-		auto it = stop.find("road_distances");
+		Stop newStop(stop.at("name"s).AsString(), stop.at("latitude"s).AsDouble(), stop.at("longitude"s).AsDouble());
+		auto it = stop.find("road_distances"s);
 		if (it != stop.end()) {
 			const map<string, json::Node>& road_distances = it->second.AsMap();
 			for (const auto& [stopName, dist] : road_distances) {
@@ -180,63 +183,68 @@ namespace jsonReader {
 	// Загружает в базу информацию о маршруте
 	void JsonReader::LoadBusInfo(const map<string, json::Node>& bus)
 	{
-		Bus newBus(bus.at("name").AsString(), bus.at("is_roundtrip").AsBool());
-		for (const json::Node& jstop : bus.at("stops").AsArray()) {
+		Bus newBus(bus.at("name"s).AsString(), bus.at("is_roundtrip"s).AsBool());
+		for (const json::Node& jstop : bus.at("stops"s).AsArray()) {
 			newBus.stop_for_bus.push_back(jstop.AsString());
 		}
 		request_pool_.buses.push_back(newBus);
 	}
 
-	// Добавляет в json ветку информацию об остановке
+	// Формирует json ветку с информацией об остановке
 	json::Node JsonReader::StopInfo(const std::map<std::string, json::Node>& stop)
 	{
-		domain::StopInfo stopInfo = this->GetStopInfo(stop.at("name").AsString());
-		std::map<std::string, json::Node> result;
+		domain::StopInfo stopInfo = this->GetStopInfo(stop.at("name"s).AsString());
+		json::Builder jbuilder = json::Builder{};
+		auto jdict = jbuilder.StartDict();
+
 		if (stopInfo.buses_on_stop) {
-			result["request_id"] = stop.at("id").AsInt();
-			vector<json::Node> stops;
-			stops.reserve(stopInfo.buses_on_stop->size());
+			jdict.Key("request_id"s).Value(stop.at("id"s).AsInt());
+			auto jstop = jdict.Key("buses"s).StartArray();
 			for (string_view sv : *(stopInfo.buses_on_stop)) {
-				stops.push_back(sv);
+				jstop.Value(std::string{ sv });
 			}
-			result["buses"] = stops;
+			jstop.EndArray();
 		}
 		else {
 			if (!stopInfo.stop_found) {
-				result["request_id"s] = stop.at("id").AsInt();
-				result["error_message"s] = "not found"s;
+				jdict.Key("request_id"s).Value(stop.at("id"s).AsInt());
+				jdict.Key("error_message"s).Value("not found"s);
 			}
 			else {
-				result["request_id"s] = stop.at("id").AsInt();
-				result["buses"s] = vector<json::Node>();
+				jdict.Key("request_id"s).Value(stop.at("id"s).AsInt());
+				jdict.Key("buses"s).StartArray().EndArray();
 			}
 		}
-		return result;
+		return jdict.EndDict().Build();
 	}
 
-	// Добавляет в json ветку информацию о маршруте
+	// Формирует json ветку с информацией о маршруте
 	json::Node JsonReader::BusInfo(const std::map<std::string, json::Node>& bus)
 	{
 		domain::BusInfo busInfo = this->GetBusInfo(bus.at("name").AsString());
-		std::map<std::string, json::Node> result;
+		json::Builder jbuilder = json::Builder{};
+		auto jresult = jbuilder.StartDict();
+
 		if (busInfo.stop_count != 0) {
-			result["request_id"] = bus.at("id").AsInt();
-			result["curvature"] = busInfo.curvature;
-			result["route_length"] = busInfo.lenght;
-			result["stop_count"] = static_cast<int>(busInfo.stop_count);
-			result["unique_stop_count"] = static_cast<int>(busInfo.unique_stop_count);
+			jresult.Key("request_id"s).Value(bus.at("id"s).AsInt());
+			jresult.Key("curvature"s).Value(busInfo.curvature);
+			jresult.Key("route_length"s).Value(busInfo.lenght);
+			jresult.Key("stop_count"s).Value(static_cast<int>(busInfo.stop_count));
+			jresult.Key("unique_stop_count"s).Value(static_cast<int>(busInfo.unique_stop_count));
 		}
 		else {
-			result["request_id"s] = bus.at("id").AsInt();
-			result["error_message"s] = "not found"s;
+			jresult.Key("request_id"s).Value(bus.at("id"s).AsInt());
+			jresult.Key("error_message"s).Value("not found"s);
 		}
-		return result;
+		return jresult.EndDict().Build();
 	}
 
-	// Загружает в json ветку карту всех маршрутов в формате svg
+	// Формирует json ветку с картой всех маршрутов в формате svg
 	json::Node jsonReader::JsonReader::SvgMap(const std::map<std::string, json::Node>& item)
 	{
-		std::map<std::string, json::Node> result;
+		json::Builder jbuilder = json::Builder{};
+		auto jresult = jbuilder.StartDict();
+
 		renderer::SVG_Settings svgSet = GetRenderSettings();
 		requestHandler::MapRequestHandler mapreq(data_base_, svgSet);
 		svg::Document svgDoc = mapreq.RenderMap();
@@ -244,12 +252,10 @@ namespace jsonReader {
 		std::stringstream ss;
 		svgDoc.Render(ss);
 
-		result["map"] = ss.str();
-		result["request_id"s] = item.at("id").AsInt();
+		jresult.Key("map"s).Value(ss.str());
+		jresult.Key("request_id"s).Value(item.at("id"s).AsInt());
 
-		return result;
+		return jresult.EndDict().Build();;
 	}
-
-
 
 } // namespace jsonReader
