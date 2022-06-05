@@ -9,7 +9,8 @@
 - названия автобусных маршрутов, которые проходят через заданную остановку.
 
 В результат запроса включается визуализация запрошенного маршрута (при соответствующем запросе выводится карта всех маршрутов). Результатом работы программы будет SVG-изображение карты, подобное этому:
-<img src="https://pictures.s3.yandex.net/resources/illustration_1650925674.svg" alt="cpp-transport-catalogue" width="400" height="400">
+
+<img src="https://pictures.s3.yandex.net/resources/illustration_1650925674.svg" alt="cpp-transport-catalogue" width="800" height="400">
 
 Проект реализован в виде консольного приложения, с версией C++17. Использованы только STL.
 
