@@ -2,13 +2,13 @@
 
 namespace geo {
 
-struct Coordinates {
-    double lat; // РЁРёСЂРѕС‚Р°
-    double lng; // Р”РѕР»РіРѕС‚Р°
-    bool operator==(const Coordinates& other) const;
-    bool operator!=(const Coordinates& other) const;
-};
+    struct Coordinates {
+        double lat; // Широта
+        double lng; // Долгота
+        bool operator==(const Coordinates& other) const;
+        bool operator!=(const Coordinates& other) const;
+    };
 
-double ComputeDistance(Coordinates from, Coordinates to);
+    double ComputeDistance(Coordinates from, Coordinates to);
 
 }  // namespace geo

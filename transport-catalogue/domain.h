@@ -4,6 +4,7 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 namespace domain {
 
@@ -14,6 +15,7 @@ namespace domain {
 		double longitude;
 		bool isRaw;
 		bool isFinalStop;
+		size_t id;
 	};
 
 	struct Bus {
@@ -24,6 +26,7 @@ namespace domain {
 		const bool is_ring;
 		double distance_by_geo;
 		double distance_by_road;
+		size_t id;
 	};
 
 	struct BusInfo {
@@ -51,5 +54,23 @@ namespace domain {
 		std::vector<DistanceToStop> distance_to_stop;
 	};
 
+	// Transport router items
+
+	struct RoutingSettings {
+		double bus_wait_time;
+		int bus_velocity;
+	};
+
+	struct RouteItem_Wait {
+		double time;
+		std::string_view stop_name;
+	};
+	struct RouteItem_Bus {
+		std::string_view bus_name;
+		double time = 0;
+		int span_count = 0;
+	};
+	struct RouteItem_NoWay {
+	};
 
 }

@@ -3,7 +3,7 @@
 namespace json {
 	Builder::Builder()
 	{
-		NodeItem tmp{ root_, ""s, NodeType::Root, {NodeType::Array, NodeType::Dict, NodeType::Value}};
+		NodeItem tmp{ root_, ""s, NodeType::Root, {NodeType::Array, NodeType::Dict, NodeType::Value} };
 		nodes_stack_.push(tmp);
 	}
 
@@ -14,7 +14,7 @@ namespace json {
 		NodeItem& top_stack = nodes_stack_.top();
 
 		if (top_stack.type == NodeType::Array) {
-			nodes_stack_.push({ Dict{}, ""s, NodeType::Dict, {NodeType::Key}});
+			nodes_stack_.push({ Dict{}, ""s, NodeType::Dict, {NodeType::Key} });
 		}
 		else {
 			nodes_stack_.push({ nodes_stack_.top().node = Dict{}, ""s, NodeType::Dict, {NodeType::Key} });
@@ -152,7 +152,7 @@ namespace json {
 	Node Builder::Build()
 	{
 		if (nodes_stack_.size() > 1) {
-			throw std::logic_error( "Unclosed element: "s + nodeTypeToStr_[static_cast<int>(nodes_stack_.top().type)]);
+			throw std::logic_error("Unclosed element: "s + nodeTypeToStr_[static_cast<int>(nodes_stack_.top().type)]);
 		}
 		if (count_item_ == 0) {
 			throw std::logic_error("There are no elements to build"s);

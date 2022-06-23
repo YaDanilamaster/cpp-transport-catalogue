@@ -39,10 +39,10 @@ namespace renderer {
 		return 0;
 	}
 
-	// РќР°СЃС‚СЂР°РёРІР°РµС‚ РїСЂРѕРµРєС‚РѕСЂ СЃС„РµСЂРёС‡РµСЃРєРёС… РєРѕРѕСЂРґРёРЅР°С‚ РЅР° РїР»РѕСЃРєРѕСЃС‚СЊ.
+	// Настраивает проектор сферических координат на плоскость.
 	void MapRenderer::PrepareSphereProjector(const std::map<std::string_view, domain::Bus*>& buses)
 	{
-		// РЅСѓР¶РµРЅ РІРµРєС‚РѕСЂ РІСЃРµС… РіРµРѕ Р»РѕРєР°С†РёР№ РѕСЃС‚Р°РЅРѕРІРѕРє
+		// нужен вектор всех гео локаций остановок
 		std::vector<geo::Coordinates> geo_coords;
 
 		for (const auto& [sv, bus] : buses) {
@@ -54,14 +54,14 @@ namespace renderer {
 			}
 		}
 
-		// РЎРѕР·РґР°С‘Рј РїСЂРѕРµРєС‚РѕСЂ СЃС„РµСЂРёС‡РµСЃРєРёС… РєРѕРѕСЂРґРёРЅР°С‚ РЅР° РєР°СЂС‚Сѓ
+		// Создаём проектор сферических координат на карту
 		proj_.SetSphereProjector(
 			geo_coords.begin(), geo_coords.end(), svg_settings_.width, svg_settings_.height, svg_settings_.padding);
 	}
 
 	void MapRenderer::DrawRouteLines(const std::map<std::string_view, domain::Bus*>& buses, svg::Document& svgDoc)
 	{
-		// Р·Р°РґР°РµРј РєРѕРѕРґСЂРёРЅР°С‚С‹ РѕСЃС‚Р°РЅРѕРІРєР°Рј
+		// задаем коодринаты остановкам
 		for (const auto& [sv, bus] : buses) {
 			svg::Polyline line;
 			int noraw_count = 0;
@@ -75,7 +75,7 @@ namespace renderer {
 			}
 
 			if (bus->stop_for_bus_forward.size() > 0 && noraw_count > 1) {
-				// Р·Р°РґР°РµРј РЅР°СЃС‚СЂРѕР№РєРё РІС‹РІРѕРґР°
+				// задаем настройки вывода
 				line.SetFillColor("none");
 				line.SetStrokeColor(svg_settings_.color_palette[GetNextPaletteIndex()]);
 				line.SetStrokeWidth(svg_settings_.line_width);
@@ -144,7 +144,7 @@ namespace renderer {
 
 	void renderer::MapRenderer::DrawStopPoint(svg::Document& svgDoc)
 	{
-		for (const auto&[name, geo] : stopsGeo_) {
+		for (const auto& [name, geo] : stopsGeo_) {
 			svg::Circle cr;
 			cr.SetCenter(proj_(geo));
 			cr.SetRadius(svg_settings_.stop_radius);
@@ -159,7 +159,7 @@ namespace renderer {
 			svg::Text textName;
 
 			textName.SetPosition(proj_(geo));
-			textName.SetOffset({ svg_settings_.stop_label_offset.dx, svg_settings_.stop_label_offset.dy});
+			textName.SetOffset({ svg_settings_.stop_label_offset.dx, svg_settings_.stop_label_offset.dy });
 			textName.SetFontSize(svg_settings_.stop_label_font_size);
 			textName.SetFontFamily("Verdana");
 			textName.SetData(std::string(name));

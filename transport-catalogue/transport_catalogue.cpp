@@ -14,34 +14,39 @@ void TransportCatalogue::AddStopToBusWithoutStat(Bus& bus, const std::vector<std
 	if (stop_count == 0) {
 		return;
 	}
-		bus.stop_for_bus_forward.resize(bus.stop_for_bus_forward.size() + stop_count + (bus.is_ring ? 0 : stop_count - 1));
-
+	bus.stop_for_bus_forward.resize(bus.stop_for_bus_forward.size() + stop_count + (bus.is_ring ? 0 : stop_count - 1));
+	Stop* stop = nullptr;
 	size_t forward = 0;
-
 	for (; forward < stop_count; forward++) {
 		auto it = stops_pointers_.find(stopsname[forward]);
 		if (it != stops_pointers_.end()) {
-			Stop* stop = it->second;
+			stop = it->second;
 			bus.stop_for_bus_forward[forward] = stop;
 
 			stop_to_buses_name_[stop].insert(bus.name);
+			++stopVertexCoutn_;
 		}
 	}
+	
 
 	if (!bus.is_ring) {
-		// ÐšÐ¾Ð½ÐµÑ‡Ð½Ð°Ñ, ÐµÑÐ»Ð¸ Ð¼Ð°Ñ€ÑˆÑ€ÑƒÑ‚ Ð½Ðµ ÐºÐ¾Ð»ÑŒÑ†ÐµÐ²Ð¾Ð¹.
+		// Êîíå÷íàÿ, åñëè ìàðøðóò íå êîëüöåâîé.
 		bus.stop_for_bus_forward[forward - 1]->isFinalStop = true;
-		bus.distance_by_road += DistanceByRoad(bus.stop_for_bus_forward[forward - 1], bus.stop_for_bus_forward[forward - 1]);
+		bus.distance_by_road += GetDistanceByRoad(bus.stop_for_bus_forward[forward - 1], bus.stop_for_bus_forward[forward - 1]);
 		auto it = stops_pointers_.find(stopsname[forward - 1]);
 		bus.secondFinalStop = it->second;
 
-		// ÐžÐ±Ñ€Ð°Ñ‚Ð½Ñ‹Ð¹ Ñ‚Ñ€ÐµÐºÐµÑ€
+		// Îáðàòíûé òðåêåð
 		for (size_t backward = stop_count - 1; backward > 0; backward--, forward++) {
 			it = stops_pointers_.find(stopsname[backward - 1]);
 			if (it != stops_pointers_.end()) {
 				bus.stop_for_bus_forward[forward] = it->second;
+				++stopVertexCoutn_;
 			}
 		}
+	}
+	else {
+		stop->isFinalStop = true;
 	}
 
 }
@@ -66,16 +71,14 @@ void TransportCatalogue::GetBusStatistic(Bus& bus) const {
 				);
 			}
 		}
-
-		bus.distance_by_road += DistanceByRoad(stop_a, stop_b);
-
+		bus.distance_by_road += GetDistanceByRoad(stop_a, stop_b);
 		first = false;
 	}
 
 }
 
 
-double TransportCatalogue::DistanceByRoad(Stop* const stop_a, Stop* const stop_b) const
+double TransportCatalogue::GetDistanceByRoad(Stop* const stop_a, Stop* const stop_b) const
 {
 	auto it_stop_to_stop = stop_to_stop_route_.find({ stop_a, stop_b });
 	if (it_stop_to_stop == stop_to_stop_route_.end()) {
@@ -104,6 +107,7 @@ void TransportCatalogue::AddStop(StopToAdd& stop_to_add)
 	else {
 		stops_list_.push_back(Stop(sv_newstop, stop_to_add.latitude, stop_to_add.longitude));
 		thisstop = &stops_list_.back();
+		thisstop->id = stops_list_.size() - 1;
 
 		thisstop->isRaw = false;
 		stops_pointers_[sv_newstop] = thisstop;
@@ -116,14 +120,15 @@ void TransportCatalogue::AddStop(StopToAdd& stop_to_add)
 		if (it_b == stops_pointers_.end()) {
 			stops_list_.push_back(Stop(sv_newstop_d, 0, 0));
 			auto pointer_stop_b = &stops_list_.back();
+			pointer_stop_b->id = stops_list_.size() - 1;
 
 			stops_pointers_[sv_newstop_d] = pointer_stop_b;
-			// Ð´Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð´Ð¸ÑÑ‚Ð°Ð½Ñ†Ð¸Ð¸ Ð¼ÐµÐ¶Ð´Ñƒ Ð¾ÑÑ‚Ð°Ð½Ð¾Ð²ÐºÐ°Ð¼Ð¸
+			// äîáàâèòü äèñòàíöèþ ìåæäó îñòàíîâêàìè
 			stop_to_stop_route_[{thisstop, pointer_stop_b}] = stop_b.distance;
 		}
 		else
 		{
-			// Ð´Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð´Ð¸ÑÑ‚Ð°Ð½Ñ†Ð¸Ð¸ Ð¼ÐµÐ¶Ð´Ñƒ Ð¾ÑÑ‚Ð°Ð½Ð¾Ð²ÐºÐ°Ð¼Ð¸
+			// äîáàâèòü äèñòàíöèþ ìåæäó îñòàíîâêàìè
 			stop_to_stop_route_[{thisstop, it_b->second}] = stop_b.distance;
 		}
 	}
@@ -138,9 +143,12 @@ void TransportCatalogue::AddBus(std::string name, const std::vector<std::string>
 	AddStopToBusWithoutStat(addbus, stopsname);
 
 	buses_list_.push_back(std::move(addbus));
-	buses_pointers_[sv] = &buses_list_.back();
+	Bus& newBus = buses_list_.back();
+	newBus.id = buses_list_.size() - 1;
+	buses_pointers_[sv] = &newBus;
+	roundBusCount_ += is_ring;
 
-	GetBusStatistic(buses_list_.back());
+	GetBusStatistic(newBus);
 }
 
 const BusInfo TransportCatalogue::GetBusInfo(const std::string_view bus_name) const
@@ -163,7 +171,6 @@ const BusInfo TransportCatalogue::GetBusInfo(const std::string_view bus_name) co
 			bus->distance_by_road,
 			bus->distance_by_road / bus->distance_by_geo
 		};
-
 	}
 	return {};
 }
@@ -181,16 +188,40 @@ const StopInfo TransportCatalogue::GetBusesInStop(const std::string_view stop_na
 	return { nullptr, false };
 }
 
+const Stop* transport_catalogue::TransportCatalogue::GetStopByName(const std::string_view stop_name) const
+{
+	auto it = stops_pointers_.find(stop_name);
+	if (it != stops_pointers_.end()) {
+		return it->second;
+	}
+	return nullptr;
+}
+
 const std::map<std::string_view, Bus*> transport_catalogue::TransportCatalogue::GetAllBuses() const
 {
 	std::map<std::string_view, Bus*> result(buses_pointers_.begin(), buses_pointers_.end());
 	return result;
 }
 
+const std::unordered_map<std::string_view, Bus*>& transport_catalogue::TransportCatalogue::GetAllBusesRef() const
+{
+	return buses_pointers_;
+}
+
 const std::map<std::string_view, Stop*> transport_catalogue::TransportCatalogue::GetAllStops() const
 {
 	std::map<std::string_view, Stop*> result(stops_pointers_.begin(), stops_pointers_.end());
 	return result;
+}
+
+const Stop& transport_catalogue::TransportCatalogue::GetStopByID(size_t id) const
+{
+	return stops_list_.at(id);
+}
+
+size_t transport_catalogue::TransportCatalogue::StopsCount() const
+{
+	return stops_list_.size();
 }
 
 size_t TransportCatalogue::HasherPairStopStop::operator()(const KeyPairStops& key) const

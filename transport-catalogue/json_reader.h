@@ -7,6 +7,7 @@
 #include "json.h"
 #include "map_renderer.h"
 #include "request_handler.h"
+#include "json_builder.h"
 
 namespace jsonReader {
 	using Base = requestHandler::LoadRequestHandler;
@@ -19,6 +20,7 @@ namespace jsonReader {
 		void ProcessStatRequests(std::ostream&);
 
 		const renderer::SVG_Settings GetRenderSettings() const;
+		void GetRoutingSettings();
 
 		Base::Request_pool& GetRequestPool();
 		json::Document& GetJsonDoc();
@@ -39,6 +41,13 @@ namespace jsonReader {
 		json::Node StopInfo(const std::map<std::string, json::Node>&);
 		json::Node BusInfo(const std::map<std::string, json::Node>&);
 		json::Node SvgMap(const std::map<std::string, json::Node>&);
+		json::Node RouteInfo(const std::map<std::string, json::Node>& route);
+
+		struct RouteItem {
+			void operator()(const domain::RouteItem_Wait& value, json::ArrayItemContext& jitem);
+			void operator()(const domain::RouteItem_Bus& value, json::ArrayItemContext& jitem);
+			void operator()(const domain::RouteItem_NoWay value, json::ArrayItemContext& jitem);
+		};
 	};
 
 } // namespace jsonReader

@@ -7,7 +7,7 @@ namespace domain {
 	{
 	}
 
-	Bus::Bus(const std::string_view bus_name, const bool is_ring) 
+	Bus::Bus(const std::string_view bus_name, const bool is_ring)
 		: name(bus_name)
 		, secondFinalStop(nullptr)
 		, is_ring(is_ring)
@@ -15,6 +15,5 @@ namespace domain {
 		, distance_by_road(0)
 	{
 	}
-
 
 }

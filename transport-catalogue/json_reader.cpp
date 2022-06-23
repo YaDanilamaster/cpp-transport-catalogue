@@ -1,5 +1,4 @@
 #include "json_reader.h"
-#include "json_builder.h"
 
 namespace jsonReader {
 	using namespace std;
@@ -14,22 +13,25 @@ namespace jsonReader {
 		jDoc_ = json::Load(is);
 	}
 
-	// РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ base_requests. Р—Р°РїСЂРѕСЃС‹ РЅР° РґРѕР±Р°РІР»РµРЅРёРµ РґР°РЅРЅС‹С… РІ СЃРїСЂР°РІРѕС‡РЅРёРє.
+	// Обрабатывает base_requests. Запросы на добавление данных в справочник.
 	void JsonReader::ProcessBaseRequests()
 	{
 		if (jDoc_.GetRoot().IsDict() && jDoc_.GetRoot().AsMap().size() != 0) {
-			// Р—Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С…
+			// Загрузка данных
 			const json::Node& base_requests_node = jDoc_.GetRoot().AsMap().find("base_requests")->second;
 			BaseRequests(base_requests_node);
 
 			ProcessRequestPool(request_pool_);
 		}
-
 	}
 
-	// РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ stat_requests. Р—Р°РїСЂРѕСЃС‹ РЅР° РїРѕР»СѓС‡РµРЅРёРµ РёРЅС„РѕСЂРјР°С†РёРё Рѕ РјР°СЂС€СЂСѓС‚Рµ.
+	// Обрабатывает stat_requests. Запросы на получение информации о маршруте.
 	void JsonReader::ProcessStatRequests(std::ostream& os)
 	{
+		// Т.к. основная нагрузка построения оптимальных путей ложится на конструктор маршрутизатора
+		// маршрутизатор инициализируется при чтении настроек маршрутизации, если они указаны.
+		GetRoutingSettings();
+
 		auto it = jDoc_.GetRoot().AsMap().find("stat_requests");
 		if (it != jDoc_.GetRoot().AsMap().end()) {
 			const json::Node& stat_requests_node = it->second;
@@ -39,7 +41,7 @@ namespace jsonReader {
 		}
 	}
 
-	// Р—Р°РіСЂСѓР¶Р°РµС‚ РЅР°СЃС‚СЂРѕР№РєРё РІРёР·СѓР°Р»РёР·Р°С†РёРё
+	// Загружает настройки визуализации
 	const renderer::SVG_Settings JsonReader::GetRenderSettings() const
 	{
 		auto it = jDoc_.GetRoot().AsMap().find("render_settings");
@@ -48,6 +50,19 @@ namespace jsonReader {
 			return RenderSettings(render_settings_node);
 		}
 		return renderer::SVG_Settings();
+	}
+
+	// Загружает настройки маршрутизации и инициализирует построение маршрутизатора.
+	void JsonReader::GetRoutingSettings()
+	{
+		auto it = jDoc_.GetRoot().AsMap().find("routing_settings");
+		if (it != jDoc_.GetRoot().AsMap().end()) {
+			const map<string, json::Node>& routing_settings_node = it->second.AsMap();
+			routingSettings_.bus_velocity = routing_settings_node.at("bus_velocity").AsInt();
+			routingSettings_.bus_wait_time = routing_settings_node.at("bus_wait_time").AsDouble();
+
+			router_ = make_unique<transport_router::RouteHandler>(data_base_, routingSettings_);
+		}
 	}
 
 	Base::Request_pool& JsonReader::GetRequestPool()
@@ -73,11 +88,11 @@ namespace jsonReader {
 				else if (request_type == "Bus") {
 					LoadBusInfo(item);
 				}
-				// ... РЅРѕРІС‹Рµ С‚РёРїС‹ Р·Р°РїСЂРѕСЃРѕРІ
+				// ... новые типы запросов
 			}
 		}
 	}
-	// С„РѕСЂРјРёСЂСѓРµС‚ json РјР°СЃСЃРёРІ СЃ СЂРµР·СѓР»СЊС‚Р°С‚Р°РјРё РїРѕ Р·Р°РїСЂРѕСЃР°Рј
+	// Обрабатывает json массив с запросами к базе
 	json::Document JsonReader::StatRequests(const json::Node& requests)
 	{
 		json::Builder jbuild = json::Builder{};
@@ -97,7 +112,11 @@ namespace jsonReader {
 				else if (request_type == "Map") {
 					jarray.Value(SvgMap(item));
 				}
-				// ... РЅРѕРІС‹Рµ С‚РёРїС‹ Р·Р°РїСЂРѕСЃРѕРІ
+				else if (request_type == "Route") {
+					jarray.Value(RouteInfo(item));
+				}
+
+				// ... новые типы запросов
 			}
 		}
 		return json::Document(jarray.EndArray().Build());
@@ -126,7 +145,7 @@ namespace jsonReader {
 		settings.stop_label_offset.dx = jpointS[0].AsDouble();
 		settings.stop_label_offset.dy = jpointS[1].AsDouble();
 
-		settings.underlayer_color = GetColorAsString(jsetings.at("underlayer_color")); 
+		settings.underlayer_color = GetColorAsString(jsetings.at("underlayer_color"));
 		settings.underlayer_width = jsetings.at("underlayer_width").AsDouble();
 
 		if (jsetings.count("color_palette") == 1) {
@@ -166,7 +185,7 @@ namespace jsonReader {
 		return "none"s;
 	}
 
-	// Р—Р°РіСЂСѓР¶Р°РµС‚ РІ Р±Р°Р·Сѓ РёРЅС„РѕСЂРјР°С†РёСЋ РѕР± РѕСЃС‚Р°РЅРѕРІРєРµ
+	// Загружает в базу информацию об остановке
 	void JsonReader::LoadStopInfo(const map<string, json::Node>& stop)
 	{
 		Stop newStop(stop.at("name"s).AsString(), stop.at("latitude"s).AsDouble(), stop.at("longitude"s).AsDouble());
@@ -180,7 +199,7 @@ namespace jsonReader {
 		request_pool_.stops.push_back(newStop);
 	}
 
-	// Р—Р°РіСЂСѓР¶Р°РµС‚ РІ Р±Р°Р·Сѓ РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ РјР°СЂС€СЂСѓС‚Рµ
+	// Загружает в базу информацию о маршруте
 	void JsonReader::LoadBusInfo(const map<string, json::Node>& bus)
 	{
 		Bus newBus(bus.at("name"s).AsString(), bus.at("is_roundtrip"s).AsBool());
@@ -190,7 +209,7 @@ namespace jsonReader {
 		request_pool_.buses.push_back(newBus);
 	}
 
-	// Р¤РѕСЂРјРёСЂСѓРµС‚ json РІРµС‚РєСѓ СЃ РёРЅС„РѕСЂРјР°С†РёРµР№ РѕР± РѕСЃС‚Р°РЅРѕРІРєРµ
+	// Формирует json ветку с информацией об остановке
 	json::Node JsonReader::StopInfo(const std::map<std::string, json::Node>& stop)
 	{
 		domain::StopInfo stopInfo = this->GetStopInfo(stop.at("name"s).AsString());
@@ -218,7 +237,7 @@ namespace jsonReader {
 		return jdict.EndDict().Build();
 	}
 
-	// Р¤РѕСЂРјРёСЂСѓРµС‚ json РІРµС‚РєСѓ СЃ РёРЅС„РѕСЂРјР°С†РёРµР№ Рѕ РјР°СЂС€СЂСѓС‚Рµ
+	// Формирует json ветку с информацией о маршруте
 	json::Node JsonReader::BusInfo(const std::map<std::string, json::Node>& bus)
 	{
 		domain::BusInfo busInfo = this->GetBusInfo(bus.at("name").AsString());
@@ -239,7 +258,7 @@ namespace jsonReader {
 		return jresult.EndDict().Build();
 	}
 
-	// Р¤РѕСЂРјРёСЂСѓРµС‚ json РІРµС‚РєСѓ СЃ РєР°СЂС‚РѕР№ РІСЃРµС… РјР°СЂС€СЂСѓС‚РѕРІ РІ С„РѕСЂРјР°С‚Рµ svg
+	// Формирует json ветку с картой всех маршрутов в формате svg
 	json::Node jsonReader::JsonReader::SvgMap(const std::map<std::string, json::Node>& item)
 	{
 		json::Builder jbuilder = json::Builder{};
@@ -256,6 +275,54 @@ namespace jsonReader {
 		jresult.Key("request_id"s).Value(item.at("id"s).AsInt());
 
 		return jresult.EndDict().Build();;
+	}
+
+	// Обрабатывает запрос на построение маршрута из точки А в точку Б
+	json::Node JsonReader::RouteInfo(const std::map<std::string, json::Node>& route) {
+		json::Builder jbuilder = json::Builder{};
+		auto jresult = jbuilder.StartDict();
+		jresult.Key("request_id"s).Value(route.at("id"s).AsInt());
+
+		const optional<transport_router::Route> routeItems = router_->BuildRoute(route.at("from").AsString(), route.at("to").AsString());
+		if (routeItems) {
+			jresult.Key("total_time"s).Value(routeItems->total_time);
+			auto jarray = jresult.Key("items"s).StartArray();
+			for (const transport_router::Items& item : routeItems->route_items) {
+				visit([&jarray](const auto& value) {
+					JsonReader::RouteItem{}(value, jarray);
+					}, item);
+			}
+			jarray.EndArray();
+		}
+		else {
+			jresult.Key("error_message"s).Value("not found"s);
+		}
+
+		return jresult.EndDict().Build();;
+	}
+
+	void JsonReader::RouteItem::operator()(const domain::RouteItem_Wait& value, json::ArrayItemContext& jitem)
+	{
+		auto jdict = jitem.StartDict();
+		jdict.Key("stop_name"s).Value(value.stop_name);
+		jdict.Key("time"s).Value(value.time);
+		jdict.Key("type"s).Value("Wait"s);
+		jdict.EndDict();
+	}
+
+	void JsonReader::RouteItem::operator()(const domain::RouteItem_Bus& value, json::ArrayItemContext& jitem)
+	{
+		auto jdict = jitem.StartDict();
+		jdict.Key("bus"s).Value(value.bus_name);
+		jdict.Key("span_count"s).Value(value.span_count);
+		jdict.Key("time"s).Value(value.time);
+		jdict.Key("type"s).Value("Bus"s);
+		jdict.EndDict();
+	}
+
+	void JsonReader::RouteItem::operator()([[maybe_unused]] const domain::RouteItem_NoWay value, [[maybe_unused]] json::ArrayItemContext& jitem)
+	{
+		// Может быть позже...
 	}
 
 } // namespace jsonReader
