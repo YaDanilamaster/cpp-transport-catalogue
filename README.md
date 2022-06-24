@@ -17,3 +17,5 @@
 <img src="https://pictures.s3.yandex.net/resources/illustration_1650925674.svg" alt="cpp-transport-catalogue" width="800" height="400">
 
 Проект реализован в виде консольного приложения, с версией C++17. Использованы только STL.
+
+Более детальное описание проекта с примерами можно посмотреть в папке "Задание".
