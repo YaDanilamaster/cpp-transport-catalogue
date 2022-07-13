@@ -1,37 +1,44 @@
-﻿cmake_minimum_required (VERSION 3.7)
+﻿cmake_minimum_required(VERSION 3.11)
 
 set ("project_name" Transport_catalog)
 
-project ("${project_name}")
+project (Transport_catalog CXX)
 
-add_executable ("${project_name}" 
-main.cpp 
-domain.h
-domain.cpp 
-geo.h
-geo.cpp
-graph.h
-json.h
-json.cpp
-json_builder.h
-json_builder.cpp
-json_reader.h
-json_reader.cpp
-map_renderer.h
-map_renderer.cpp
-ranges.h
-request_handler.h
-request_handler.cpp
-router.h
-svg.h
-svg.cpp
-transport_catalogue.h
-transport_catalogue.cpp
-transport_router.h
-transport_router.cpp )
+set(CMAKE_CXX_STANDARD 17)
 
+#set(SOURCE_DIR src/)
 
-set_target_properties("${project_name}" PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO )
+set(FILES_H
+ "${SOURCE_DIR/}domain.h"
+ "${SOURCE_DIR/}geo.h"
+ "${SOURCE_DIR/}graph.h"
+ "${SOURCE_DIR/}json.h"
+ "${SOURCE_DIR/}json_builder.h"
+ "${SOURCE_DIR/}json_reader.h"
+ "${SOURCE_DIR/}map_renderer.h"
+ "${SOURCE_DIR/}ranges.h"
+ "${SOURCE_DIR/}request_handler.h"
+ "${SOURCE_DIR/}router.h"
+ "${SOURCE_DIR/}svg.h"
+ "${SOURCE_DIR/}transport_catalogue.h"
+ "${SOURCE_DIR/}transport_router.h"
+)
+
+set(FILES_CPP
+ "${SOURCE_DIR/}main.cpp"
+ "${SOURCE_DIR/}domain.cpp"
+ "${SOURCE_DIR/}geo.cpp"
+ "${SOURCE_DIR/}json.cpp"
+ "${SOURCE_DIR/}json_builder.cpp"
+ "${SOURCE_DIR/}json_reader.cpp"
+ "${SOURCE_DIR/}map_renderer.cpp"
+ "${SOURCE_DIR/}request_handler.cpp"
+ "${SOURCE_DIR/}svg.cpp"
+ "${SOURCE_DIR/}transport_catalogue.cpp"
+ "${SOURCE_DIR/}transport_router.cpp"
+)
+
+source_group("Headers" FILES ${FILES_H})
+source_group("Sources" FILES ${FILES_CPP}) 
+
+add_executable(transport-catalogue ${FILES_H} ${FILES_CPP}) 
