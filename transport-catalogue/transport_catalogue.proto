@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package transport_catalogue_serialize;
+
+import "map_renderer.proto";
+import "transport_router.proto";
+import "graph.proto";
+
+message Strings_Stuct {
+	bytes originString = 1;
+	uint32 id = 2;
+}
+
+message Stop {
+	uint32 name_id = 1;
+	double latitude = 2;
+	double longitude = 3;
+	bool isRaw = 4;
+	bool isFinalStop = 5;
+	uint32 stop_id = 6;
+}
+
+message Optional_Uint32 {
+	uint32 value = 1;
+}
+
+message Bus {
+		uint32 name_id = 1;
+		repeated uint32 stop_id_for_bus = 2;
+		Optional_Uint32 secondFinalStop_id = 3;
+		bool is_ring = 4;
+		double distance_by_geo = 5;
+		double distance_by_road = 6;
+		uint32 bus_id = 7;
+}
+
+message Stop_to_stop_distance {
+	uint32 stop_a_id = 1;
+	uint32 stop_b_id = 2;
+	uint32 distance = 3;
+}
+
+message DataBase {
+	repeated Strings_Stuct strings_list = 1;
+	repeated Stop stops_list = 2;
+	repeated Bus buses_list = 3;
+	repeated Stop_to_stop_distance distance_list = 4;
+	SVG_Settings svgSettings = 5;
+	RoutingSettings routingSettings = 6;
+	DirectedWeightedGraph graph = 7;
+	VertexFrom router = 8;
+}

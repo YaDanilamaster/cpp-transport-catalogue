@@ -68,7 +68,7 @@ namespace svg {
 
 		std::ostream& out;
 		int indent_step = 0;
-		int indent = 0;
+		int indent = 1;
 	};
 
 
@@ -103,31 +103,31 @@ namespace svg {
 	template <typename Owner>
 	class PathProps {
 	public:
-		//задаёт значение свойства fill — цвет заливки. По умолчанию свойство не выводится.
+		//Р·Р°РґР°С‘С‚ Р·РЅР°С‡РµРЅРёРµ СЃРІРѕР№СЃС‚РІР° fill вЂ” С†РІРµС‚ Р·Р°Р»РёРІРєРё. РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ СЃРІРѕР№СЃС‚РІРѕ РЅРµ РІС‹РІРѕРґРёС‚СЃСЏ.
 		Owner& SetFillColor(Color color) {
 			fill_color_ = std::move(color);
 			return AsOwner();
 		}
 
-		// задаёт значение свойства stroke — цвет контура. По умолчанию свойство не выводится.
+		// Р·Р°РґР°С‘С‚ Р·РЅР°С‡РµРЅРёРµ СЃРІРѕР№СЃС‚РІР° stroke вЂ” С†РІРµС‚ РєРѕРЅС‚СѓСЂР°. РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ СЃРІРѕР№СЃС‚РІРѕ РЅРµ РІС‹РІРѕРґРёС‚СЃСЏ.
 		Owner& SetStrokeColor(Color color) {
 			stroke_color_ = std::move(color);
 			return AsOwner();
 		}
 
-		//задаёт значение свойства stroke-width — толщину линии. По умолчанию свойство не выводится.
+		//Р·Р°РґР°С‘С‚ Р·РЅР°С‡РµРЅРёРµ СЃРІРѕР№СЃС‚РІР° stroke-width вЂ” С‚РѕР»С‰РёРЅСѓ Р»РёРЅРёРё. РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ СЃРІРѕР№СЃС‚РІРѕ РЅРµ РІС‹РІРѕРґРёС‚СЃСЏ.
 		Owner& SetStrokeWidth(double width) {
 			stroke_width_ = width;
 			return AsOwner();
 		}
 
-		//задаёт значение свойства stroke-linecap — тип формы конца линии. По умолчанию свойство не выводится.
+		//Р·Р°РґР°С‘С‚ Р·РЅР°С‡РµРЅРёРµ СЃРІРѕР№СЃС‚РІР° stroke-linecap вЂ” С‚РёРї С„РѕСЂРјС‹ РєРѕРЅС†Р° Р»РёРЅРёРё. РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ СЃРІРѕР№СЃС‚РІРѕ РЅРµ РІС‹РІРѕРґРёС‚СЃСЏ.
 		Owner& SetStrokeLineCap(StrokeLineCap line_cap) {
 			stroke_linecap_ = line_cap;
 			return AsOwner();
 		}
 
-		//задаёт значение свойства stroke-linejoin — тип формы соединения линий. По умолчанию свойство не выводится.
+		//Р·Р°РґР°С‘С‚ Р·РЅР°С‡РµРЅРёРµ СЃРІРѕР№СЃС‚РІР° stroke-linejoin вЂ” С‚РёРї С„РѕСЂРјС‹ СЃРѕРµРґРёРЅРµРЅРёСЏ Р»РёРЅРёР№. РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ СЃРІРѕР№СЃС‚РІРѕ РЅРµ РІС‹РІРѕРґРёС‚СЃСЏ.
 		Owner& SetStrokeLineJoin(StrokeLineJoin line_join) {
 			stroke_linejoin_ = line_join;
 			return AsOwner();
@@ -166,15 +166,15 @@ namespace svg {
 		std::optional<StrokeLineJoin> stroke_linejoin_;
 
 		Owner& AsOwner() {
-			// static_cast безопасно преобразует *this к Owner&,
-			// если класс Owner — наследник PathProps
+			// static_cast Р±РµР·РѕРїР°СЃРЅРѕ РїСЂРµРѕР±СЂР°Р·СѓРµС‚ *this Рє Owner&,
+			// РµСЃР»Рё РєР»Р°СЃСЃ Owner вЂ” РЅР°СЃР»РµРґРЅРёРє PathProps
 			return static_cast<Owner&>(*this);
 		}
 	};
 
 
 	/*
-	 * Класс Circle моделирует элемент <circle> для отображения круга
+	 * РљР»Р°СЃСЃ Circle РјРѕРґРµР»РёСЂСѓРµС‚ СЌР»РµРјРµРЅС‚ <circle> РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РєСЂСѓРіР°
 	 * https://developer.mozilla.org/en-US/docs/Web/SVG/Element/circle
 	 */
 	class Circle final : public Object, public PathProps<Circle> {
@@ -190,16 +190,16 @@ namespace svg {
 	};
 
 	/*
-	 * Класс Polyline моделирует элемент <polyline> для отображения ломаных линий
+	 * РљР»Р°СЃСЃ Polyline РјРѕРґРµР»РёСЂСѓРµС‚ СЌР»РµРјРµРЅС‚ <polyline> РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ Р»РѕРјР°РЅС‹С… Р»РёРЅРёР№
 	 * https://developer.mozilla.org/en-US/docs/Web/SVG/Element/polyline
 	 */
 	class Polyline final : public Object, public PathProps<Polyline> {
 	public:
-		// Добавляет очередную вершину к ломаной линии
+		// Р”РѕР±Р°РІР»СЏРµС‚ РѕС‡РµСЂРµРґРЅСѓСЋ РІРµСЂС€РёРЅСѓ Рє Р»РѕРјР°РЅРѕР№ Р»РёРЅРёРё
 		Polyline& AddPoint(Point point);
 
 		/*
-		 * Прочие методы и данные, необходимые для реализации элемента <polyline>
+		 * РџСЂРѕС‡РёРµ РјРµС‚РѕРґС‹ Рё РґР°РЅРЅС‹Рµ, РЅРµРѕР±С…РѕРґРёРјС‹Рµ РґР»СЏ СЂРµР°Р»РёР·Р°С†РёРё СЌР»РµРјРµРЅС‚Р° <polyline>
 		 */
 		const std::vector<Point>& GetPoints() const;
 
@@ -210,30 +210,30 @@ namespace svg {
 	};
 
 	/*
-	 * Класс Text моделирует элемент <text> для отображения текста
+	 * РљР»Р°СЃСЃ Text РјРѕРґРµР»РёСЂСѓРµС‚ СЌР»РµРјРµРЅС‚ <text> РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ С‚РµРєСЃС‚Р°
 	 * https://developer.mozilla.org/en-US/docs/Web/SVG/Element/text
 	 */
 	class Text final : public Object, public PathProps<Text> {
 	public:
-		// Задаёт координаты опорной точки (атрибуты x и y)
+		// Р—Р°РґР°С‘С‚ РєРѕРѕСЂРґРёРЅР°С‚С‹ РѕРїРѕСЂРЅРѕР№ С‚РѕС‡РєРё (Р°С‚СЂРёР±СѓС‚С‹ x Рё y)
 		Text& SetPosition(Point pos);
 
-		// Задаёт смещение относительно опорной точки (атрибуты dx, dy)
+		// Р—Р°РґР°С‘С‚ СЃРјРµС‰РµРЅРёРµ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ РѕРїРѕСЂРЅРѕР№ С‚РѕС‡РєРё (Р°С‚СЂРёР±СѓС‚С‹ dx, dy)
 		Text& SetOffset(Point offset);
 
-		// Задаёт размеры шрифта (атрибут font-size)
+		// Р—Р°РґР°С‘С‚ СЂР°Р·РјРµСЂС‹ С€СЂРёС„С‚Р° (Р°С‚СЂРёР±СѓС‚ font-size)
 		Text& SetFontSize(uint32_t size);
 
-		// Задаёт название шрифта (атрибут font-family)
+		// Р—Р°РґР°С‘С‚ РЅР°Р·РІР°РЅРёРµ С€СЂРёС„С‚Р° (Р°С‚СЂРёР±СѓС‚ font-family)
 		Text& SetFontFamily(std::string font_family);
 
-		// Задаёт толщину шрифта (атрибут font-weight)
+		// Р—Р°РґР°С‘С‚ С‚РѕР»С‰РёРЅСѓ С€СЂРёС„С‚Р° (Р°С‚СЂРёР±СѓС‚ font-weight)
 		Text& SetFontWeight(std::string font_weight);
 
-		// Задаёт текстовое содержимое объекта (отображается внутри тега text)
+		// Р—Р°РґР°С‘С‚ С‚РµРєСЃС‚РѕРІРѕРµ СЃРѕРґРµСЂР¶РёРјРѕРµ РѕР±СЉРµРєС‚Р° (РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РІРЅСѓС‚СЂРё С‚РµРіР° text)
 		Text& SetData(std::string data);
 
-		// Прочие данные и методы, необходимые для реализации элемента <text>
+		// РџСЂРѕС‡РёРµ РґР°РЅРЅС‹Рµ Рё РјРµС‚РѕРґС‹, РЅРµРѕР±С…РѕРґРёРјС‹Рµ РґР»СЏ СЂРµР°Р»РёР·Р°С†РёРё СЌР»РµРјРµРЅС‚Р° <text>
 	private:
 		void RenderObject(const RenderContext& context) const override;
 		std::string GetSafeData() const;
@@ -249,13 +249,13 @@ namespace svg {
 	class Document final : public ObjectContainer {
 	public:
 
-		// Добавляет в svg-документ объект-наследник svg::Object
+		// Р”РѕР±Р°РІР»СЏРµС‚ РІ svg-РґРѕРєСѓРјРµРЅС‚ РѕР±СЉРµРєС‚-РЅР°СЃР»РµРґРЅРёРє svg::Object
 		void AddPtr(std::unique_ptr<Object>&& obj) override;
 
-		// Выводит в ostream svg-представление документа
+		// Р’С‹РІРѕРґРёС‚ РІ ostream svg-РїСЂРµРґСЃС‚Р°РІР»РµРЅРёРµ РґРѕРєСѓРјРµРЅС‚Р°
 		void Render(std::ostream& out) const;
 
-		// Прочие методы и данные, необходимые для реализации класса Document
+		// РџСЂРѕС‡РёРµ РјРµС‚РѕРґС‹ Рё РґР°РЅРЅС‹Рµ, РЅРµРѕР±С…РѕРґРёРјС‹Рµ РґР»СЏ СЂРµР°Р»РёР·Р°С†РёРё РєР»Р°СЃСЃР° Document
 
 	private:
 		std::vector<std::unique_ptr<Object>> objects_;
@@ -275,14 +275,14 @@ namespace shapes {
 			, p3_(p3) {
 		}
 
-		// Реализует метод Draw интерфейса svg::Drawable
+		// Р РµР°Р»РёР·СѓРµС‚ РјРµС‚РѕРґ Draw РёРЅС‚РµСЂС„РµР№СЃР° svg::Drawable
 		void Draw(svg::ObjectContainer& container) const override;
 
 	private:
 		svg::Point p1_, p2_, p3_;
 	};
 
-	class Star : public svg::Drawable { /* Реализуйте самостоятельно */
+	class Star : public svg::Drawable { /* Р РµР°Р»РёР·СѓР№С‚Рµ СЃР°РјРѕСЃС‚РѕСЏС‚РµР»СЊРЅРѕ */
 	public:
 		Star(svg::Point center, double outer_rad, double inner_rad, int num_rays);
 		void Draw(svg::ObjectContainer& container) const override;
@@ -295,7 +295,7 @@ namespace shapes {
 		int num_rays_;
 	};
 
-	class Snowman : public svg::Drawable { /* Реализуйте самостоятельно */
+	class Snowman : public svg::Drawable { /* Р РµР°Р»РёР·СѓР№С‚Рµ СЃР°РјРѕСЃС‚РѕСЏС‚РµР»СЊРЅРѕ */
 	public:
 		Snowman(svg::Point head_center, double head_rad);
 		void Draw(svg::ObjectContainer& container) const override;

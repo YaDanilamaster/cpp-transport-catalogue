@@ -8,6 +8,7 @@
 #include "map_renderer.h"
 #include "request_handler.h"
 #include "json_builder.h"
+#include "serialization.h"
 
 namespace jsonReader {
 	using Base = requestHandler::LoadRequestHandler;
@@ -18,6 +19,8 @@ namespace jsonReader {
 		void LoadJson(std::istream&);
 		void ProcessBaseRequests();
 		void ProcessStatRequests(std::ostream&);
+		void ProcessSerialization();
+		void ProcessDeserialization();
 
 		const renderer::SVG_Settings GetRenderSettings() const;
 		void GetRoutingSettings();
@@ -28,6 +31,7 @@ namespace jsonReader {
 	private:
 		Base::Request_pool request_pool_;
 		json::Document jDoc_;
+		renderer::SVG_Settings svgSettings_;
 
 		void BaseRequests(const json::Node&);
 		json::Document StatRequests(const json::Node&);

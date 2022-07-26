@@ -16,4 +16,9 @@ namespace domain {
 	{
 	}
 
+	StopToStopDistance::StopToStopDistance(size_t stopA, size_t stopB, size_t dist)
+		: stop_a(stopA), stop_b(stopB), distance(dist)
+	{
+	}
+
 }

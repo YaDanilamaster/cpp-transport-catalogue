@@ -39,10 +39,10 @@ namespace renderer {
 		return 0;
 	}
 
-	// Настраивает проектор сферических координат на плоскость.
+	// РќР°СЃС‚СЂР°РёРІР°РµС‚ РїСЂРѕРµРєС‚РѕСЂ СЃС„РµСЂРёС‡РµСЃРєРёС… РєРѕРѕСЂРґРёРЅР°С‚ РЅР° РїР»РѕСЃРєРѕСЃС‚СЊ.
 	void MapRenderer::PrepareSphereProjector(const std::map<std::string_view, domain::Bus*>& buses)
 	{
-		// нужен вектор всех гео локаций остановок
+		// РЅСѓР¶РµРЅ РІРµРєС‚РѕСЂ РІСЃРµС… РіРµРѕ Р»РѕРєР°С†РёР№ РѕСЃС‚Р°РЅРѕРІРѕРє
 		std::vector<geo::Coordinates> geo_coords;
 
 		for (const auto& [sv, bus] : buses) {
@@ -54,14 +54,14 @@ namespace renderer {
 			}
 		}
 
-		// Создаём проектор сферических координат на карту
+		// РЎРѕР·РґР°С‘Рј РїСЂРѕРµРєС‚РѕСЂ СЃС„РµСЂРёС‡РµСЃРєРёС… РєРѕРѕСЂРґРёРЅР°С‚ РЅР° РєР°СЂС‚Сѓ
 		proj_.SetSphereProjector(
 			geo_coords.begin(), geo_coords.end(), svg_settings_.width, svg_settings_.height, svg_settings_.padding);
 	}
 
 	void MapRenderer::DrawRouteLines(const std::map<std::string_view, domain::Bus*>& buses, svg::Document& svgDoc)
 	{
-		// задаем коодринаты остановкам
+		// Р·Р°РґР°РµРј РєРѕРѕРґСЂРёРЅР°С‚С‹ РѕСЃС‚Р°РЅРѕРІРєР°Рј
 		for (const auto& [sv, bus] : buses) {
 			svg::Polyline line;
 			int noraw_count = 0;
@@ -75,7 +75,7 @@ namespace renderer {
 			}
 
 			if (bus->stop_for_bus_forward.size() > 0 && noraw_count > 1) {
-				// задаем настройки вывода
+				// Р·Р°РґР°РµРј РЅР°СЃС‚СЂРѕР№РєРё РІС‹РІРѕРґР°
 				line.SetFillColor("none");
 				line.SetStrokeColor(svg_settings_.color_palette[GetNextPaletteIndex()]);
 				line.SetStrokeWidth(svg_settings_.line_width);

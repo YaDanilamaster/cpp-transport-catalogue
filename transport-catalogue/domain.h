@@ -54,6 +54,13 @@ namespace domain {
 		std::vector<DistanceToStop> distance_to_stop;
 	};
 
+	struct StopToStopDistance {
+		StopToStopDistance(size_t, size_t, size_t);
+		size_t stop_a;
+		size_t stop_b;
+		size_t distance;
+	};
+
 	// Transport router items
 
 	struct RoutingSettings {

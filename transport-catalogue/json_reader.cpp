@@ -13,11 +13,11 @@ namespace jsonReader {
 		jDoc_ = json::Load(is);
 	}
 
-	// Обрабатывает base_requests. Запросы на добавление данных в справочник.
+	// РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ base_requests. Р—Р°РїСЂРѕСЃС‹ РЅР° РґРѕР±Р°РІР»РµРЅРёРµ РґР°РЅРЅС‹С… РІ СЃРїСЂР°РІРѕС‡РЅРёРє.
 	void JsonReader::ProcessBaseRequests()
 	{
 		if (jDoc_.GetRoot().IsDict() && jDoc_.GetRoot().AsMap().size() != 0) {
-			// Загрузка данных
+			// Р—Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С…
 			const json::Node& base_requests_node = jDoc_.GetRoot().AsMap().find("base_requests")->second;
 			BaseRequests(base_requests_node);
 
@@ -25,12 +25,13 @@ namespace jsonReader {
 		}
 	}
 
-	// Обрабатывает stat_requests. Запросы на получение информации о маршруте.
+	// РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ stat_requests. Р—Р°РїСЂРѕСЃС‹ РЅР° РїРѕР»СѓС‡РµРЅРёРµ РёРЅС„РѕСЂРјР°С†РёРё Рѕ РјР°СЂС€СЂСѓС‚Рµ.
 	void JsonReader::ProcessStatRequests(std::ostream& os)
 	{
-		// Т.к. основная нагрузка построения оптимальных путей ложится на конструктор маршрутизатора
-		// маршрутизатор инициализируется при чтении настроек маршрутизации, если они указаны.
-		GetRoutingSettings();
+		// Рў.Рє. РѕСЃРЅРѕРІРЅР°СЏ РЅР°РіСЂСѓР·РєР° РїРѕСЃС‚СЂРѕРµРЅРёСЏ РѕРїС‚РёРјР°Р»СЊРЅС‹С… РїСѓС‚РµР№ Р»РѕР¶РёС‚СЃСЏ РЅР° РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ РјР°СЂС€СЂСѓС‚РёР·Р°С‚РѕСЂР°
+		// РјР°СЂС€СЂСѓС‚РёР·Р°С‚РѕСЂ РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµС‚СЃСЏ РїСЂРё С‡С‚РµРЅРёРё РЅР°СЃС‚СЂРѕРµРє РјР°СЂС€СЂСѓС‚РёР·Р°С†РёРё, РµСЃР»Рё РѕРЅРё СѓРєР°Р·Р°РЅС‹.
+		
+		//GetRoutingSettings(); - РЅРµ Р°РєС‚СѓР°Р»СЊРЅРѕ РґР»СЏ СЂРµР¶РёРјР° process_requests
 
 		auto it = jDoc_.GetRoot().AsMap().find("stat_requests");
 		if (it != jDoc_.GetRoot().AsMap().end()) {
@@ -41,7 +42,60 @@ namespace jsonReader {
 		}
 	}
 
-	// Загружает настройки визуализации
+	// РЎРµСЂРёР°Р»РёР·СѓРµС‚ Р±Р°Р·Сѓ РґР°РЅРЅС‹С… РІ Р±РёРЅР°СЂРЅС‹Р№ С„Р°Р№Р»
+	void JsonReader::ProcessSerialization()
+	{
+		auto it = jDoc_.GetRoot().AsMap().find("serialization_settings");
+		if (it != jDoc_.GetRoot().AsMap().end()) {
+			json::Node& fileName = it->second.AsMap().find("file")->second;
+
+			transport_catalogue::serialize::Serialize serialize(data_base_, filesystem::path(fileName.AsString()));
+			serialize.SetSVGSettings(GetRenderSettings());
+			GetRoutingSettings();
+			serialize.SetRoutingSettings(routingSettings_);
+			serialize.SetGraph(router_->GetGrahpPtr());
+			serialize.SetRouter(router_->GetRouterPtr());
+			serialize.Save();
+		}
+	}
+
+	// Р”РµСЃРµСЂРёР°Р»РёР·СѓРµС‚ РґР°РЅРЅС‹Рµ РёР· Р±РёРЅР°СЂРЅРѕРіРѕ С„Р°Р№Р»Р° РІ СЃРїСЂР°РІРѕС‡РЅРёРє
+	void JsonReader::ProcessDeserialization()
+	{
+		auto it = jDoc_.GetRoot().AsMap().find("serialization_settings");
+		if (it != jDoc_.GetRoot().AsMap().end()) {
+			json::Node& fileName = it->second.AsMap().find("file")->second;
+			transport_catalogue::serialize::Deserialize deserialize(data_base_, filesystem::path(fileName.AsString()));
+			deserialize.Load();
+
+			optional<renderer::SVG_Settings> svgSetts = deserialize.GetSVGSettings();
+			if (svgSetts) {
+				svgSettings_ = move(svgSetts.value());
+			}
+
+			std::optional<domain::RoutingSettings> routigSettings = deserialize.GetRoutingSettings();
+			if (routigSettings) {
+				routingSettings_ = move(routigSettings.value());
+
+				transport_router::GraphBuilder graphBuilder(
+					data_base_,
+					routingSettings_,
+					move(deserialize.GetEdges()),
+					move(deserialize.GetIncidence_lists())
+					);
+
+				router_ = make_unique<transport_router::RouteHandler>(
+					data_base_,
+					routingSettings_,
+					forward<transport_router::GraphBuilder>(graphBuilder),
+					forward<graph::Router<double>::RoutesInternalData>(deserialize.GetRoutesInternalData())
+					);
+			}
+		}
+	}
+
+
+	// Р—Р°РіСЂСѓР¶Р°РµС‚ РЅР°СЃС‚СЂРѕР№РєРё РІРёР·СѓР°Р»РёР·Р°С†РёРё
 	const renderer::SVG_Settings JsonReader::GetRenderSettings() const
 	{
 		auto it = jDoc_.GetRoot().AsMap().find("render_settings");
@@ -49,10 +103,10 @@ namespace jsonReader {
 			const map<string, json::Node>& render_settings_node = it->second.AsMap();
 			return RenderSettings(render_settings_node);
 		}
-		return renderer::SVG_Settings();
+		return svgSettings_;
 	}
 
-	// Загружает настройки маршрутизации и инициализирует построение маршрутизатора.
+	// Р—Р°РіСЂСѓР¶Р°РµС‚ РЅР°СЃС‚СЂРѕР№РєРё РјР°СЂС€СЂСѓС‚РёР·Р°С†РёРё Рё РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµС‚ РїРѕСЃС‚СЂРѕРµРЅРёРµ РјР°СЂС€СЂСѓС‚РёР·Р°С‚РѕСЂР°.
 	void JsonReader::GetRoutingSettings()
 	{
 		auto it = jDoc_.GetRoot().AsMap().find("routing_settings");
@@ -88,11 +142,11 @@ namespace jsonReader {
 				else if (request_type == "Bus") {
 					LoadBusInfo(item);
 				}
-				// ... новые типы запросов
+				// ... РЅРѕРІС‹Рµ С‚РёРїС‹ Р·Р°РїСЂРѕСЃРѕРІ
 			}
 		}
 	}
-	// Обрабатывает json массив с запросами к базе
+	// РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ json РјР°СЃСЃРёРІ СЃ Р·Р°РїСЂРѕСЃР°РјРё Рє Р±Р°Р·Рµ
 	json::Document JsonReader::StatRequests(const json::Node& requests)
 	{
 		json::Builder jbuild = json::Builder{};
@@ -116,7 +170,7 @@ namespace jsonReader {
 					jarray.Value(RouteInfo(item));
 				}
 
-				// ... новые типы запросов
+				// ... РЅРѕРІС‹Рµ С‚РёРїС‹ Р·Р°РїСЂРѕСЃРѕРІ
 			}
 		}
 		return json::Document(jarray.EndArray().Build());
@@ -185,7 +239,7 @@ namespace jsonReader {
 		return "none"s;
 	}
 
-	// Загружает в базу информацию об остановке
+	// Р—Р°РіСЂСѓР¶Р°РµС‚ РІ Р±Р°Р·Сѓ РёРЅС„РѕСЂРјР°С†РёСЋ РѕР± РѕСЃС‚Р°РЅРѕРІРєРµ
 	void JsonReader::LoadStopInfo(const map<string, json::Node>& stop)
 	{
 		Stop newStop(stop.at("name"s).AsString(), stop.at("latitude"s).AsDouble(), stop.at("longitude"s).AsDouble());
@@ -199,7 +253,7 @@ namespace jsonReader {
 		request_pool_.stops.push_back(newStop);
 	}
 
-	// Загружает в базу информацию о маршруте
+	// Р—Р°РіСЂСѓР¶Р°РµС‚ РІ Р±Р°Р·Сѓ РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ РјР°СЂС€СЂСѓС‚Рµ
 	void JsonReader::LoadBusInfo(const map<string, json::Node>& bus)
 	{
 		Bus newBus(bus.at("name"s).AsString(), bus.at("is_roundtrip"s).AsBool());
@@ -209,7 +263,7 @@ namespace jsonReader {
 		request_pool_.buses.push_back(newBus);
 	}
 
-	// Формирует json ветку с информацией об остановке
+	// Р¤РѕСЂРјРёСЂСѓРµС‚ json РІРµС‚РєСѓ СЃ РёРЅС„РѕСЂРјР°С†РёРµР№ РѕР± РѕСЃС‚Р°РЅРѕРІРєРµ
 	json::Node JsonReader::StopInfo(const std::map<std::string, json::Node>& stop)
 	{
 		domain::StopInfo stopInfo = this->GetStopInfo(stop.at("name"s).AsString());
@@ -237,7 +291,7 @@ namespace jsonReader {
 		return jdict.EndDict().Build();
 	}
 
-	// Формирует json ветку с информацией о маршруте
+	// Р¤РѕСЂРјРёСЂСѓРµС‚ json РІРµС‚РєСѓ СЃ РёРЅС„РѕСЂРјР°С†РёРµР№ Рѕ РјР°СЂС€СЂСѓС‚Рµ
 	json::Node JsonReader::BusInfo(const std::map<std::string, json::Node>& bus)
 	{
 		domain::BusInfo busInfo = this->GetBusInfo(bus.at("name").AsString());
@@ -258,7 +312,7 @@ namespace jsonReader {
 		return jresult.EndDict().Build();
 	}
 
-	// Формирует json ветку с картой всех маршрутов в формате svg
+	// Р¤РѕСЂРјРёСЂСѓРµС‚ json РІРµС‚РєСѓ СЃ РєР°СЂС‚РѕР№ РІСЃРµС… РјР°СЂС€СЂСѓС‚РѕРІ РІ С„РѕСЂРјР°С‚Рµ svg
 	json::Node jsonReader::JsonReader::SvgMap(const std::map<std::string, json::Node>& item)
 	{
 		json::Builder jbuilder = json::Builder{};
@@ -277,7 +331,7 @@ namespace jsonReader {
 		return jresult.EndDict().Build();;
 	}
 
-	// Обрабатывает запрос на построение маршрута из точки А в точку Б
+	// РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ Р·Р°РїСЂРѕСЃ РЅР° РїРѕСЃС‚СЂРѕРµРЅРёРµ РјР°СЂС€СЂСѓС‚Р° РёР· С‚РѕС‡РєРё Рђ РІ С‚РѕС‡РєСѓ Р‘
 	json::Node JsonReader::RouteInfo(const std::map<std::string, json::Node>& route) {
 		json::Builder jbuilder = json::Builder{};
 		auto jresult = jbuilder.StartDict();
@@ -285,6 +339,7 @@ namespace jsonReader {
 
 		const optional<transport_router::Route> routeItems = router_->BuildRoute(route.at("from").AsString(), route.at("to").AsString());
 		if (routeItems) {
+			//&& !holds_alternative<domain::RouteItem_NoWay>(routeItems->route_items[0] ?
 			jresult.Key("total_time"s).Value(routeItems->total_time);
 			auto jarray = jresult.Key("items"s).StartArray();
 			for (const transport_router::Items& item : routeItems->route_items) {
@@ -322,7 +377,7 @@ namespace jsonReader {
 
 	void JsonReader::RouteItem::operator()([[maybe_unused]] const domain::RouteItem_NoWay value, [[maybe_unused]] json::ArrayItemContext& jitem)
 	{
-		// Может быть позже...
+		// РњРѕР¶РµС‚ Р±С‹С‚СЊ РїРѕР·Р¶Рµ...
 	}
 
 } // namespace jsonReader

@@ -7,6 +7,7 @@
 #include<variant>
 #include<algorithm>
 #include<memory>
+#include<utility>
 
 #include <iostream>
 
@@ -19,6 +20,8 @@ namespace transport_router {
 	
 	using Items = std::variant<domain::RouteItem_Wait, domain::RouteItem_Bus, domain::RouteItem_NoWay>;
 
+	class RouteHandler;
+
 	struct Route {
 		std::vector<Items> route_items;
 		double total_time = 0;
@@ -28,10 +31,17 @@ namespace transport_router {
 	{
 	public:
 		GraphBuilder(transport_catalogue::TransportCatalogue&, domain::RoutingSettings&);
-		const graph::DirectedWeightedGraph<double>& GetGrahp() const;
+
+		// РљРѕРЅСЃС‚СЂСѓРёСЂСѓРµС‚ РіСЂР°С„ РёР· РіРѕС‚РѕРІС‹С… (РґРµСЃРµСЂРёР°Р»РёР·РѕРІР°РЅРЅС‹С…) РґР°РЅРЅС‹С….
+		GraphBuilder(
+			transport_catalogue::TransportCatalogue&,
+			domain::RoutingSettings&,
+			std::vector<graph::Edge<double>>&&,
+			std::vector<std::vector<size_t>>&&
+		);
+		graph::DirectedWeightedGraph<double>* GetGrahpPtr();
 		std::optional<Route> GetItemsFromRouteInfo(const std::optional<graph::Router<double>::RouteInfo>& routeInfo) const;
 		
-		void PrintDiagnosticInfo() const;
 
 	private:
 		const int TIME_SPAN = 60;
@@ -45,31 +55,45 @@ namespace transport_router {
 
 		void DrawEdgeForSimpleRoute(domain::Bus* bus);
 		void DrawEdgeForRoundRoute(domain::Bus* bus);
-
 	};
 
 
 
-	// Обработчик запросов на построение маршрутов. Включае в себя взвешенный граф (класс DirectedWeightedGraph) и маршрутизатор (класс Router).
+	// РћР±СЂР°Р±РѕС‚С‡РёРє Р·Р°РїСЂРѕСЃРѕРІ РЅР° РїРѕСЃС‚СЂРѕРµРЅРёРµ РјР°СЂС€СЂСѓС‚РѕРІ. Р’РєР»СЋС‡Р°РµС‚ РІ СЃРµР±СЏ РІР·РІРµС€РµРЅРЅС‹Р№ РіСЂР°С„ (РєР»Р°СЃСЃ DirectedWeightedGraph) Рё РјР°СЂС€СЂСѓС‚РёР·Р°С‚РѕСЂ (РєР»Р°СЃСЃ Router).
 	class RouteHandler {
-		/*Память, нужная для хранения графа, линейна относительно суммы количеств вершин и рёбер.
-		Конструктор и деструктор графа имеют линейную сложность, а остальные методы константны или амортизированно константны.
-		Маршрутизатор — класс Router — требует квадратичного относительно количества вершин объёма памяти, не считая памяти, требуемой для хранения кэша маршрутов.
-		Конструктор маршрутизатора имеет сложность O(V^3 + E), где V — количество вершин графа, E — количество рёбер.
-		Маршрутизатор не работает с графами, имеющими рёбра отрицательного веса.
-		Построение маршрута на готовом маршрутизаторе линейно относительно количества рёбер в маршруте.
-		Таким образом, основная нагрузка построения оптимальных путей ложится на конструктор маршрутизатора.*/
+		/*РџР°РјСЏС‚СЊ, РЅСѓР¶РЅР°СЏ РґР»СЏ С…СЂР°РЅРµРЅРёСЏ РіСЂР°С„Р°, Р»РёРЅРµР№РЅР° РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ СЃСѓРјРјС‹ РєРѕР»РёС‡РµСЃС‚РІ РІРµСЂС€РёРЅ Рё СЂС‘Р±РµСЂ.
+		РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ Рё РґРµСЃС‚СЂСѓРєС‚РѕСЂ РіСЂР°С„Р° РёРјРµСЋС‚ Р»РёРЅРµР№РЅСѓСЋ СЃР»РѕР¶РЅРѕСЃС‚СЊ, Р° РѕСЃС‚Р°Р»СЊРЅС‹Рµ РјРµС‚РѕРґС‹ РєРѕРЅСЃС‚Р°РЅС‚РЅС‹ РёР»Рё Р°РјРѕСЂС‚РёР·РёСЂРѕРІР°РЅРЅРѕ РєРѕРЅСЃС‚Р°РЅС‚РЅС‹.
+		РњР°СЂС€СЂСѓС‚РёР·Р°С‚РѕСЂ вЂ” РєР»Р°СЃСЃ Router вЂ” С‚СЂРµР±СѓРµС‚ РєРІР°РґСЂР°С‚РёС‡РЅРѕРіРѕ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ РєРѕР»РёС‡РµСЃС‚РІР° РІРµСЂС€РёРЅ РѕР±СЉС‘РјР° РїР°РјСЏС‚Рё, РЅРµ СЃС‡РёС‚Р°СЏ РїР°РјСЏС‚Рё, С‚СЂРµР±СѓРµРјРѕР№ РґР»СЏ С…СЂР°РЅРµРЅРёСЏ РєСЌС€Р° РјР°СЂС€СЂСѓС‚РѕРІ.
+		РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ РјР°СЂС€СЂСѓС‚РёР·Р°С‚РѕСЂР° РёРјРµРµС‚ СЃР»РѕР¶РЅРѕСЃС‚СЊ O(V^3 + E), РіРґРµ V вЂ” РєРѕР»РёС‡РµСЃС‚РІРѕ РІРµСЂС€РёРЅ РіСЂР°С„Р°, E вЂ” РєРѕР»РёС‡РµСЃС‚РІРѕ СЂС‘Р±РµСЂ.
+		РњР°СЂС€СЂСѓС‚РёР·Р°С‚РѕСЂ РЅРµ СЂР°Р±РѕС‚Р°РµС‚ СЃ РіСЂР°С„Р°РјРё, РёРјРµСЋС‰РёРјРё СЂС‘Р±СЂР° РѕС‚СЂРёС†Р°С‚РµР»СЊРЅРѕРіРѕ РІРµСЃР°.
+		РџРѕСЃС‚СЂРѕРµРЅРёРµ РјР°СЂС€СЂСѓС‚Р° РЅР° РіРѕС‚РѕРІРѕРј РјР°СЂС€СЂСѓС‚РёР·Р°С‚РѕСЂРµ Р»РёРЅРµР№РЅРѕ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ РєРѕР»РёС‡РµСЃС‚РІР° СЂС‘Р±РµСЂ РІ РјР°СЂС€СЂСѓС‚Рµ.
+		РўР°РєРёРј РѕР±СЂР°Р·РѕРј, РѕСЃРЅРѕРІРЅР°СЏ РЅР°РіСЂСѓР·РєР° РїРѕСЃС‚СЂРѕРµРЅРёСЏ РѕРїС‚РёРјР°Р»СЊРЅС‹С… РїСѓС‚РµР№ Р»РѕР¶РёС‚СЃСЏ РЅР° РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ РјР°СЂС€СЂСѓС‚РёР·Р°С‚РѕСЂР°.*/
 
 	public:
-		RouteHandler(transport_catalogue::TransportCatalogue&, domain::RoutingSettings&);
+		// РљРѕРЅСЃС‚СЂСѓРёСЂСѓРµС‚ РїСѓСЃС‚РѕР№ РіСЂР°С„ Рё РїСѓСЃС‚РѕР№ РјР°СЂС€СЂСѓС‚РёР·Р°С‚РѕСЂ
+		RouteHandler(
+			transport_catalogue::TransportCatalogue&, 
+			domain::RoutingSettings&
+		);
+
+		// РљРѕРЅСЃС‚СЂСѓРёСЂСѓРµС‚ РјР°СЂС€СЂСѓС‚РёР·Р°С‚РѕСЂ РёР· РіРѕС‚РѕРІС‹С… (РґРµСЃРµСЂРёР°Р»РёР·РѕРІР°РЅРЅС‹С…) РґР°РЅРЅС‹С….
+		RouteHandler(
+			transport_catalogue::TransportCatalogue& db,
+			domain::RoutingSettings& route_sett,
+			GraphBuilder&& graphBuilder, 
+			graph::Router<double>::RoutesInternalData&& routes_data
+		);
 
 		std::optional<Route> BuildRoute(const std::string_view from, const std::string_view to) const;
 
+		graph::Router<double>* GetRouterPtr();
+		graph::DirectedWeightedGraph<double>* GetGrahpPtr();
+
 	private:
-		GraphBuilder graph_builder_;
-		std::unique_ptr<graph::Router<double>> router_ptr_;
 		transport_catalogue::TransportCatalogue& db_;
 		domain::RoutingSettings& routing_settings_;
+		GraphBuilder graph_builder_;
+		graph::Router<double> router_;
 	};
 
 } // namespace transport_router

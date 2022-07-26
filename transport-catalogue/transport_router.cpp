@@ -13,9 +13,25 @@ namespace transport_router {
 		BuildGraph();
 	}
 
-	const graph::DirectedWeightedGraph<double>& GraphBuilder::GetGrahp() const
+	GraphBuilder::GraphBuilder(
+		transport_catalogue::TransportCatalogue& db,
+		domain::RoutingSettings& routing_sett,
+		std::vector<graph::Edge<double>>&& edges,
+		std::vector<std::vector<size_t>>&& incList
+	)
+		: db_(db)
+		, routing_settings_(routing_sett)
+		, dwGraph_(
+			forward<std::vector<graph::Edge<double>>>(edges),
+			forward<std::vector<std::vector<size_t>>>(incList)
+		)
 	{
-		return dwGraph_;
+		
+	}
+
+	graph::DirectedWeightedGraph<double>* GraphBuilder::GetGrahpPtr()
+	{
+		return &dwGraph_;
 	}
 
 	optional<Route> GraphBuilder::GetItemsFromRouteInfo(const std::optional<graph::Router<double>::RouteInfo>& routeInfo) const
@@ -45,22 +61,13 @@ namespace transport_router {
 		return result;
 	}
 
-	void GraphBuilder::PrintDiagnosticInfo() const
-	{
-		cerr << "Statistic info:"s << '\n';
-		cerr << "Graph - Edge count: "s << dwGraph_.GetEdgeCount() << '\n';
-		cerr << "Graph - Vertex count: "s << dwGraph_.GetVertexCount() << '\n';
-		cerr << "Db - Stops count: "s << db_.StopsCount() << '\n';
-		cerr << "Db - Buses count: "s << db_.GetAllBusesRef().size() << '\n' << '\n';
-	}
-
 	double GraphBuilder::TakeWeightEdge(domain::Stop* const stop_a, domain::Stop* const stop_b) const
 	{
 		const double distance = db_.GetDistanceByRoad(stop_a, stop_b) / 1000;
 		return (distance / routing_settings_.bus_velocity) * TIME_SPAN;
 	}
 
-	// Рисует из маршрутов направленный взвешенный граф. Вектор vertex_ содержит информацию о всех вершинах.
+	// Р РёСЃСѓРµС‚ РёР· РјР°СЂС€СЂСѓС‚РѕРІ РЅР°РїСЂР°РІР»РµРЅРЅС‹Р№ РІР·РІРµС€РµРЅРЅС‹Р№ РіСЂР°С„.
 	void transport_router::GraphBuilder::BuildGraph()
 	{
 		const unordered_map<string_view, domain::Bus*>& allBuses = db_.GetAllBusesRef();
@@ -72,11 +79,9 @@ namespace transport_router {
 				DrawEdgeForRoundRoute(bus_ptr);
 			}
 		}
-
-		PrintDiagnosticInfo();
 	}
 
-	// Прокладываем ребра между вершинами прямого маршрута
+	// РџСЂРѕРєР»Р°РґС‹РІР°РµРј СЂРµР±СЂР° РјРµР¶РґСѓ РІРµСЂС€РёРЅР°РјРё РїСЂСЏРјРѕРіРѕ РјР°СЂС€СЂСѓС‚Р°
 	void GraphBuilder::DrawEdgeForSimpleRoute(domain::Bus* bus)
 	{
 		const vector<domain::Stop*> stops = bus->stop_for_bus_forward;
@@ -85,7 +90,7 @@ namespace transport_router {
 		for (size_t i = 0; i < stopsCount - 1; i++) {
 			double weightFrom = routing_settings_.bus_wait_time;
 			double weightTo = weightFrom;
-			int count = 0; // ++ будет быстрее, чем вычислять разницу между j и i
+			int count = 0; // ++ Р±СѓРґРµС‚ Р±С‹СЃС‚СЂРµРµ, С‡РµРј РІС‹С‡РёСЃР»СЏС‚СЊ СЂР°Р·РЅРёС†Сѓ РјРµР¶РґСѓ j Рё i
 
 			for (size_t j = i + 1; j < stopsCount; j++) {
 				weightFrom += TakeWeightEdge(stops[j - 1], stops[j]);
@@ -96,11 +101,11 @@ namespace transport_router {
 				dwGraph_.AddEdge({ stops[j]->id, stops[i]->id, weightTo, count, bus });
 			}
 		}
-		// Приехали. Дальше только пересадка
+		// РџСЂРёРµС…Р°Р»Рё. Р”Р°Р»СЊС€Рµ С‚РѕР»СЊРєРѕ РїРµСЂРµСЃР°РґРєР°
 		dwGraph_.AddEdge({ stops[0]->id, stops[stopsCount - 1]->id, routing_settings_.bus_wait_time, 0, bus });
 	}
 
-	// Прокладываем ребра между вершинами кругового маршрута
+	// РџСЂРѕРєР»Р°РґС‹РІР°РµРј СЂРµР±СЂР° РјРµР¶РґСѓ РІРµСЂС€РёРЅР°РјРё РєСЂСѓРіРѕРІРѕРіРѕ РјР°СЂС€СЂСѓС‚Р°
 	void GraphBuilder::DrawEdgeForRoundRoute(domain::Bus* bus)
 	{
 		const vector<domain::Stop*> stops = bus->stop_for_bus_forward;
@@ -108,7 +113,7 @@ namespace transport_router {
 
 		for (size_t i = 0; i < stopsCount - 1; i++) {
 			double weight = routing_settings_.bus_wait_time;
-			int count = 0; // ++ будет быстрее, чем вычислять разницу j и i
+			int count = 0; // ++ Р±СѓРґРµС‚ Р±С‹СЃС‚СЂРµРµ, С‡РµРј РІС‹С‡РёСЃР»СЏС‚СЊ СЂР°Р·РЅРёС†Сѓ j Рё i
 
 			for (size_t j = i + 1; j < stopsCount; j++) {
 				weight += TakeWeightEdge(stops[j - 1], stops[j]);
@@ -117,15 +122,31 @@ namespace transport_router {
 				dwGraph_.AddEdge({ stops[i]->id, stops[j]->id, weight, count, bus });
 			}
 		}
-		// Приехали. Дальше только пересадка
+		// РџСЂРёРµС…Р°Р»Рё. Р”Р°Р»СЊС€Рµ С‚РѕР»СЊРєРѕ РїРµСЂРµСЃР°РґРєР°
 		dwGraph_.AddEdge({ stops[0]->id, stops[stopsCount - 1]->id, routing_settings_.bus_wait_time, 0, bus });
 	}
 
 	RouteHandler::RouteHandler(transport_catalogue::TransportCatalogue& db, domain::RoutingSettings& route_sett)
-		: graph_builder_(db, route_sett), db_(db), routing_settings_(route_sett)
+		: graph_builder_(db, route_sett), db_(db)
+		, routing_settings_(route_sett)
+		, router_(*graph_builder_.GetGrahpPtr())
 	{
-		router_ptr_ = make_unique<graph::Router<double>>(graph_builder_.GetGrahp());
+		
 	}
+
+	RouteHandler::RouteHandler(
+		transport_catalogue::TransportCatalogue& db,
+		domain::RoutingSettings& route_sett,
+		GraphBuilder&& graphBuilder, 
+		graph::Router<double>::RoutesInternalData&& routes_data
+	)
+		: db_(db)
+		, routing_settings_(route_sett)
+		, graph_builder_(forward<GraphBuilder>(graphBuilder))
+		, router_(*graph_builder_.GetGrahpPtr(), forward<graph::Router<double>::RoutesInternalData>(routes_data))
+	{
+	}
+
 
 	optional<Route> RouteHandler::BuildRoute(const std::string_view from_sv, const std::string_view to_sv) const
 	{
@@ -133,9 +154,19 @@ namespace transport_router {
 		const domain::Stop* stop_to = db_.GetStopByName(to_sv);
 		
 		if (stop_from != nullptr && stop_to != nullptr) {
-			return graph_builder_.GetItemsFromRouteInfo(router_ptr_->BuildRoute(stop_from->id, stop_to->id));
+			return graph_builder_.GetItemsFromRouteInfo(router_.BuildRoute(stop_from->id, stop_to->id));
 		}
 		return nullopt;
+	}
+
+	graph::Router<double>* RouteHandler::GetRouterPtr()
+	{
+		return &router_;
+	}
+
+	graph::DirectedWeightedGraph<double>* RouteHandler::GetGrahpPtr()
+	{
+		return graph_builder_.GetGrahpPtr();
 	}
 
 } // namespace transport_router

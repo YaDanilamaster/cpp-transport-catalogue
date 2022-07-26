@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package transport_catalogue_serialize;
+
+import "graph.proto";
+
+message RoutingSettings {
+		double bus_wait_time = 1;
+		uint32 bus_velocity = 2;
+}
+
+message RouteInternalData {
+        double weight = 1;
+        oneof edgeId {
+			bool isNull = 2;
+			uint32 prev_edge = 3;
+		}
+}
+
+message OptionalRouteInternalData {
+	oneof optional_route_internal_data {
+		bool isNull = 1;
+        RouteInternalData route_internal_data = 2;
+    }
+}
+
+message VertexTo {
+	repeated OptionalRouteInternalData routes_internal_data = 1;
+}
+
+message VertexFrom {
+	repeated VertexTo from = 1;
+}

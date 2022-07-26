@@ -1,11 +1,13 @@
 #include "transport_catalogue.h"
 
 using namespace transport_catalogue;
+using namespace domain;
 
 std::string_view TransportCatalogue::PlaceStringName(std::string& name)
 {
-	auto [item, _] = string_names_.insert(std::move(name));
-	return std::string_view(*item);
+	auto [item, isNew] = string_names_.insert({ std::move(name), stringCount_ });
+	stringCount_ += isNew;
+	return std::string_view(item->first);
 }
 
 void TransportCatalogue::AddStopToBusWithoutStat(Bus& bus, const std::vector<std::string>& stopsname)
@@ -24,24 +26,22 @@ void TransportCatalogue::AddStopToBusWithoutStat(Bus& bus, const std::vector<std
 			bus.stop_for_bus_forward[forward] = stop;
 
 			stop_to_buses_name_[stop].insert(bus.name);
-			++stopVertexCoutn_;
+			//++stopVertexCoutn_;
 		}
 	}
-	
+
 
 	if (!bus.is_ring) {
-		// Конечная, если маршрут не кольцевой.
 		bus.stop_for_bus_forward[forward - 1]->isFinalStop = true;
 		bus.distance_by_road += GetDistanceByRoad(bus.stop_for_bus_forward[forward - 1], bus.stop_for_bus_forward[forward - 1]);
 		auto it = stops_pointers_.find(stopsname[forward - 1]);
 		bus.secondFinalStop = it->second;
 
-		// Обратный трекер
 		for (size_t backward = stop_count - 1; backward > 0; backward--, forward++) {
 			it = stops_pointers_.find(stopsname[backward - 1]);
 			if (it != stops_pointers_.end()) {
 				bus.stop_for_bus_forward[forward] = it->second;
-				++stopVertexCoutn_;
+				//++stopVertexCoutn_;
 			}
 		}
 	}
@@ -90,6 +90,23 @@ double TransportCatalogue::GetDistanceByRoad(Stop* const stop_a, Stop* const sto
 	return it_stop_to_stop->second;
 }
 
+const std::vector<StopToStopDistance> transport_catalogue::TransportCatalogue::GetAllStopToStopDistance() const
+{
+	std::vector<StopToStopDistance> result;
+	result.reserve(stop_to_stop_route_.size());
+	for (auto& item : stop_to_stop_route_) {
+		result.emplace_back(item.first.stop_a->id, item.first.stop_b->id, item.second);
+	}
+	return result;
+}
+
+void transport_catalogue::TransportCatalogue::InsertStopToStopDistance(const StopToStopDistance& stops)
+{
+	stop_to_stop_route_[{
+		&stops_list_[stops.stop_a],
+		&stops_list_[stops.stop_b]}] = stops.distance;
+}
+
 void TransportCatalogue::AddStop(StopToAdd& stop_to_add)
 {
 	std::string_view sv_newstop = PlaceStringName(stop_to_add.stop_name);
@@ -123,12 +140,10 @@ void TransportCatalogue::AddStop(StopToAdd& stop_to_add)
 			pointer_stop_b->id = stops_list_.size() - 1;
 
 			stops_pointers_[sv_newstop_d] = pointer_stop_b;
-			// добавить дистанцию между остановками
 			stop_to_stop_route_[{thisstop, pointer_stop_b}] = stop_b.distance;
 		}
 		else
 		{
-			// добавить дистанцию между остановками
 			stop_to_stop_route_[{thisstop, it_b->second}] = stop_b.distance;
 		}
 	}
@@ -146,7 +161,7 @@ void TransportCatalogue::AddBus(std::string name, const std::vector<std::string>
 	Bus& newBus = buses_list_.back();
 	newBus.id = buses_list_.size() - 1;
 	buses_pointers_[sv] = &newBus;
-	roundBusCount_ += is_ring;
+	//roundBusCount_ += is_ring;
 
 	GetBusStatistic(newBus);
 }
@@ -208,15 +223,65 @@ const std::unordered_map<std::string_view, Bus*>& transport_catalogue::Transport
 	return buses_pointers_;
 }
 
+const std::deque<Bus>& transport_catalogue::TransportCatalogue::GetBusesList() const
+{
+	return buses_list_;
+}
+
+domain::Bus* transport_catalogue::TransportCatalogue::MutableBusById(size_t busId)
+{
+	return &buses_list_[busId];
+}
+
+void transport_catalogue::TransportCatalogue::InsertBus(Bus&& bus)
+{
+	buses_list_.push_back(std::move(bus));
+	Bus& ref = buses_list_.back();
+	buses_pointers_[ref.name] = &ref;
+
+	for (Stop* stop : ref.stop_for_bus_forward) {
+		stop_to_buses_name_[stop].insert(ref.name);
+	}
+}
+
 const std::map<std::string_view, Stop*> transport_catalogue::TransportCatalogue::GetAllStops() const
 {
 	std::map<std::string_view, Stop*> result(stops_pointers_.begin(), stops_pointers_.end());
 	return result;
 }
 
+const std::deque<Stop>& transport_catalogue::TransportCatalogue::GetStopsList() const
+{
+	return stops_list_;
+}
+
+void transport_catalogue::TransportCatalogue::InsertStop(Stop&& stop)
+{
+	stops_list_.push_back(std::move(stop));
+	Stop& ref = stops_list_.back();
+	stops_pointers_[ref.name] = &ref;
+}
+
+std::string_view TransportCatalogue::InsertString(std::string&& string, size_t string_id)
+{
+	auto [item, isNew] = string_names_.insert({ std::move(string), string_id });
+	stringCount_ += isNew;
+	return std::string_view(item->first);
+}
+
+const std::unordered_map<std::string, size_t>& transport_catalogue::TransportCatalogue::GetAllStrings() const
+{
+	return string_names_;
+}
+
 const Stop& transport_catalogue::TransportCatalogue::GetStopByID(size_t id) const
 {
 	return stops_list_.at(id);
+}
+
+Stop* transport_catalogue::TransportCatalogue::MutableStopById(size_t stop_id)
+{
+	return &stops_list_[stop_id];
 }
 
 size_t transport_catalogue::TransportCatalogue::StopsCount() const
